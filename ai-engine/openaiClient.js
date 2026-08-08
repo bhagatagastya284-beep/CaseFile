@@ -1,4 +1,5 @@
-git inticonst OpenAI = require('openai');
+const OpenAI = require('openai');
+const { detectPromptInjection } = require('./security/promptInjectionGuard');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -29,6 +30,11 @@ async function completeJSON({ system, user, temperature }) {
   if (!client) {
     throw new Error('OPENAI_API_KEY is not configured');
   }
+ const injectionCheck = detectPromptInjection(user);
+
+    if (injectionCheck.detected) {
+        throw new Error(injectionCheck.reason);
+    }
 
   return withRetry(async () => {
     const response = await client.chat.completions.create({
@@ -50,6 +56,10 @@ async function completeText({ system, user, temperature }) {
   if (!client) {
     throw new Error('OPENAI_API_KEY is not configured');
   }
+  const injectionCheck = detectPromptInjection(user);
+  if (injectionCheck.detected) {
+        throw new Error(injectionCheck.reason);
+    }
 
   return withRetry(async () => {
     const response = await client.chat.completions.create({
